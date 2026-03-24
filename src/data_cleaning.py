@@ -3,7 +3,7 @@ import glob
 import os
 import re
 import numpy as np
-from utils import (
+from src.utils import (
     normalize_team,
     clean_currency,
     clean_player_name,
@@ -11,7 +11,7 @@ from utils import (
     calculate_correct_pct,
     toi_to_float,
 )
-from renaming_map import apply_renaming_map
+from src.renaming_map import apply_renaming_map
 
 def process_pipeline():
     os.makedirs('data/processed', exist_ok=True)
