@@ -127,6 +127,25 @@ def load_clean_data(input_path: str | Path) -> pd.DataFrame:
     """Load the cleaned player dataset."""
     return pd.read_csv(input_path)
 
+def normalize_toi_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert TOI columns from MM:SS strings to numeric minutes."""
+    df = df.copy()
+
+    toi_cols = [
+        "Avg TOI",
+        "Total Ice Time",
+        "Power Play Time On Ice",
+        "Short Handed Time On Ice",
+        "PP TOI",
+        "SH TOI",
+        "TOI(EV)",
+    ]
+
+    for col in toi_cols:
+        if col in df.columns:
+            df[col] = df[col].apply(toi_to_float)
+
+    return df
 
 def drop_excluded_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Drop columns removed earlier in feature exploration."""
@@ -174,7 +193,7 @@ def add_per_60_features(df: pd.DataFrame) -> pd.DataFrame:
     if TOTAL_TOI_COL not in df.columns:
         return df
 
-    total_toi_minutes = df[TOTAL_TOI_COL].apply(toi_to_float)
+    total_toi_minutes = df[TOTAL_TOI_COL]
 
     for source_col, feature_name in PER_60_FEATURE_SPECS.items():
         if source_col in df.columns:
@@ -190,7 +209,7 @@ def add_usage_features(df: pd.DataFrame) -> pd.DataFrame:
     if TOTAL_TOI_COL not in df.columns:
         return df
 
-    total_toi_minutes = df[TOTAL_TOI_COL].apply(toi_to_float)
+    total_toi_minutes = df[TOTAL_TOI_COL]
 
     usage_map = {
         "PP TOI": "PP_TOI_share",
@@ -200,7 +219,7 @@ def add_usage_features(df: pd.DataFrame) -> pd.DataFrame:
 
     for source_col, feature_name in usage_map.items():
         if source_col in df.columns:
-            source_minutes = df[source_col].apply(toi_to_float)
+            source_minutes = df[source_col]
             df[feature_name] = safe_divide(source_minutes, total_toi_minutes)
 
     return df
@@ -265,7 +284,7 @@ def add_efficiency_features(df: pd.DataFrame) -> pd.DataFrame:
         )
 
     if {"Points", TOTAL_TOI_COL}.issubset(df.columns):
-        total_toi_minutes = df[TOTAL_TOI_COL].apply(toi_to_float)
+        total_toi_minutes = df[TOTAL_TOI_COL]
         df["Points_per_60_alt"] = safe_divide(df["Points"] * 60, total_toi_minutes)
 
     return df
@@ -282,7 +301,7 @@ def add_salary_features(df: pd.DataFrame) -> pd.DataFrame:
         df["CapHit_per_xG"] = safe_divide(df["Cap Hit"], df["Individual xGoals_MP"])
 
     if {"Cap Hit", TOTAL_TOI_COL}.issubset(df.columns):
-        total_toi_minutes = df[TOTAL_TOI_COL].apply(toi_to_float)
+        total_toi_minutes = df[TOTAL_TOI_COL]
         df["CapHit_per_TOI"] = safe_divide(df["Cap Hit"], total_toi_minutes)
 
     if {"Points", "Cap Pct"}.issubset(df.columns):
@@ -298,10 +317,11 @@ def apply_player_filters(df: pd.DataFrame) -> pd.DataFrame:
     """Filter to players with minimum games played and total ice time."""
     df = df.copy()
 
+
     if GP_COL not in df.columns or TOTAL_TOI_COL not in df.columns:
         return df
 
-    total_toi_minutes = df[TOTAL_TOI_COL].apply(toi_to_float)
+    total_toi_minutes = df[TOTAL_TOI_COL]
     df = df[(df[GP_COL] >= MIN_GP) & (total_toi_minutes >= MIN_TOTAL_TOI)].copy()
 
     return df
@@ -412,7 +432,7 @@ def build_features_pipeline(
     """Run the full feature engineering pipeline."""
     print("Loading cleaned player data...")
     df = load_clean_data(input_path)
-
+    df = normalize_toi_columns(df)
     df = drop_excluded_columns(df)
     df = add_faceoff_total(df)
     df = add_per_game_features(df)
